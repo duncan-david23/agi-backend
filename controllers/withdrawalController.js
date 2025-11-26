@@ -180,15 +180,52 @@ export const adminGetAllWithdrawals = async (req, res) => {
 
 
 // approve or reject withdrawal
+// export const adminUpdateWithdrawalStatus = async (req, res) => {
+//   try {
+//     const { withdrawalId, userId, amount } = req.body;
+
+//     if (!withdrawalId) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+
+//     // Update the withdrawal status
+//     const { data: updateData, error: updateError } = await supabaseAsosAdmin
+//       .from("withdrawal_request")
+//       .update({ status: 'completed' })
+//       .eq("id", withdrawalId)
+//       .select()
+//       .single();
+
+//     if (updateError) {
+//       console.error("Error updating withdrawal status:", updateError);
+//       return res.status(500).json({ error: "Failed to update withdrawal status" });
+//     }
+
+//     return res.status(200).json({
+//       message: "Withdrawal status updated successfully",
+//       withdrawal: updateData,
+//     });
+
+//   } catch (err) {
+//     console.error("Unexpected error in adminUpdateWithdrawalStatus:", err);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// };
+
+
+
+
+// new approval commission under test
+
 export const adminUpdateWithdrawalStatus = async (req, res) => {
   try {
-    const { withdrawalId } = req.body;
+    const { withdrawalId, userId, amount } = req.body;
 
-    if (!withdrawalId) {
+    if (!withdrawalId || !userId || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Update the withdrawal status
+    // 1. Update the withdrawal status
     const { data: updateData, error: updateError } = await supabaseAsosAdmin
       .from("withdrawal_request")
       .update({ status: 'completed' })
@@ -201,9 +238,41 @@ export const adminUpdateWithdrawalStatus = async (req, res) => {
       return res.status(500).json({ error: "Failed to update withdrawal status" });
     }
 
+    // 2. Fetch the user’s current commission
+    const { data: userData, error: userError } = await supabaseAsosCustomer
+      .from("users_profile")
+      .select("withdrawable_commission")
+      .eq("user_id", userId)
+      .single();
+
+    if (userError || !userData) {
+      console.error("Error fetching user commission:", userError);
+      return res.status(500).json({ error: "Failed to fetch user commission" });
+    }
+
+    // 3. Calculate the new commission
+    const newCommission = userData.withdrawable_commission - amount;
+
+    if (newCommission < 0) {
+      return res.status(400).json({ error: "Insufficient commission balance" });
+    }
+
+    // 4. Update the user’s commission
+    const { error: commissionError } = await supabaseAsosCustomer
+      .from("users_profile")
+      .update({ withdrawable_commission: newCommission })
+      .eq("user_id", userId);
+
+    if (commissionError) {
+      console.error("Error updating commission:", commissionError);
+      return res.status(500).json({ error: "Failed to update user commission" });
+    }
+
+    // 5. Final response
     return res.status(200).json({
-      message: "Withdrawal status updated successfully",
+      message: "Withdrawal completed & commission updated",
       withdrawal: updateData,
+      newCommission,
     });
 
   } catch (err) {
@@ -211,3 +280,9 @@ export const adminUpdateWithdrawalStatus = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+
+
+
+
+

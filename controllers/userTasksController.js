@@ -19,7 +19,7 @@ const loadDailyTasks = async () => {
 
     // 2️⃣ Pick 10 random products
     cached10 = products.sort(() => Math.random() - 0.5).slice(0, 10);
-    console.log("Daily tasks loaded:", cached10.length);
+    // console.log("Daily tasks loaded:", cached10.length);
 
     // 3️⃣ Assign to all users
     await assignTasksToAllUsers();
