@@ -122,3 +122,92 @@ export const getUserWithdrawals = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 }
+
+
+
+
+
+
+
+// fetch all withdrawals for admin
+export const adminGetAllWithdrawals = async (req, res) => {
+  try {
+    // 1️⃣ Check for Authorization Header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: "Missing authorization header" });
+    }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    // 2️⃣ Validate Admin Token
+    const { data: { user }, error: userError } = await supabaseAsos.auth.getUser(token);
+
+    if (userError || !user) {
+      console.error("Invalid or expired token:", userError);
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    // 3️⃣ Fetch all withdrawal requests
+    const { data: withdrawals, error: withdrawalsError } = await supabaseAsosAdmin
+      .from("withdrawal_request")
+      .select("*")
+      .order('created_at', { ascending: false });
+
+    if (withdrawalsError) {
+      console.error("Error fetching withdrawal requests:", withdrawalsError);
+      return res.status(500).json({ error: "Failed to fetch withdrawal requests" });
+    }
+
+    // 4️⃣ Return the list of withdrawal requests
+    return res.status(200).json({ withdrawals });
+
+  } catch (err) {
+    console.error("Unexpected error in getUserWithdrawals:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+// approve or reject withdrawal
+export const adminUpdateWithdrawalStatus = async (req, res) => {
+  try {
+    const { withdrawalId } = req.body;
+
+    if (!withdrawalId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Update the withdrawal status
+    const { data: updateData, error: updateError } = await supabaseAsosAdmin
+      .from("withdrawal_request")
+      .update({ status: 'completed' })
+      .eq("id", withdrawalId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Error updating withdrawal status:", updateError);
+      return res.status(500).json({ error: "Failed to update withdrawal status" });
+    }
+
+    return res.status(200).json({
+      message: "Withdrawal status updated successfully",
+      withdrawal: updateData,
+    });
+
+  } catch (err) {
+    console.error("Unexpected error in adminUpdateWithdrawalStatus:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
