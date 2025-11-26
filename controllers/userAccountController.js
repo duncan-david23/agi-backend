@@ -157,3 +157,50 @@ export const getAllUserProfiles = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
+
+
+
+// for ADMIN ONLY
+// top up user wallet by admin
+export const topUpUserWallet = async (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+    
+    // Validate input
+    if (!userId || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid userId or amount" });
+    }
+
+    // Fetch current wallet balance
+    const { data: userProfile, error: fetchError } = await supabaseAsosCustomer
+      .from("users_profile")
+      .select("wallet")
+      .eq("user_id", userId)
+      .single();
+
+    if (fetchError || !userProfile) {
+      console.error("Error fetching user profile:", fetchError);
+      return res.status(500).json({ error: "Failed to fetch user profile" });
+    }
+
+    const newBalance = userProfile.wallet + amount;
+
+    // Update wallet balance
+    const { data: updateData, error: updateError } = await supabaseAsosCustomer
+      .from("users_profile")
+      .update({ wallet: newBalance })
+      .eq("user_id", userId);
+
+    if (updateError) {
+      console.error("Error updating wallet balance:", updateError);
+      return res.status(500).json({ error: "Failed to update wallet balance" });
+    }
+
+    return res.status(200).json({ message: "Wallet topped up successfully", newBalance });
+
+  } catch (err) {
+    console.error("Unexpected error in topUpUserWallet:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};

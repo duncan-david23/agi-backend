@@ -1,5 +1,5 @@
 import express from 'express';
-import { createUserProfile, getUserProfile, getAllUserProfiles  } from '../controllers/userAccountController.js';
+import { createUserProfile, getUserProfile, getAllUserProfiles, topUpUserWallet  } from '../controllers/userAccountController.js';
 
 
 
@@ -11,5 +11,6 @@ router.post('/create-profile', createUserProfile);
 router.get('/profile', getUserProfile);
 // ADMIN ONLY
 router.get('/all-profiles', getAllUserProfiles);
+router.put('/top-up-wallet', topUpUserWallet);
 
 export default router;
