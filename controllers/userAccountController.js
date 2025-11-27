@@ -163,19 +163,64 @@ export const getAllUserProfiles = async (req, res) => {
 
 // for ADMIN ONLY
 // top up user wallet by admin
+// export const topUpUserWallet = async (req, res) => {
+//   try {
+//     const { userId, amount } = req.body;
+    
+//     // Validate input
+//     if (!userId || !amount || amount <= 0) {
+//       return res.status(400).json({ error: "Invalid userId or amount" });
+//     }
+
+//     // Fetch current wallet balance
+//     const { data: userProfile, error: fetchError } = await supabaseAsosCustomer
+//       .from("users_profile")
+//       .select("wallet")
+//       .eq("user_id", userId)
+//       .single();
+
+//     if (fetchError || !userProfile) {
+//       console.error("Error fetching user profile:", fetchError);
+//       return res.status(500).json({ error: "Failed to fetch user profile" });
+//     }
+
+//     const newBalance = userProfile.wallet + amount;
+
+//     // Update wallet balance
+//     const { data: updateData, error: updateError } = await supabaseAsosCustomer
+//       .from("users_profile")
+//       .update({ wallet: newBalance })
+//       .eq("user_id", userId);
+
+//     if (updateError) {
+//       console.error("Error updating wallet balance:", updateError);
+//       return res.status(500).json({ error: "Failed to update wallet balance" });
+//     }
+
+//     return res.status(200).json({ message: "Wallet topped up successfully", newBalance });
+
+//   } catch (err) {
+//     console.error("Unexpected error in topUpUserWallet:", err);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// };
+
+
+
+
+
 export const topUpUserWallet = async (req, res) => {
   try {
     const { userId, amount } = req.body;
-    
-    // Validate input
+
     if (!userId || !amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid userId or amount" });
     }
 
-    // Fetch current wallet balance
+    // 1️⃣ Fetch current user profile (to get wallet + referral_code)
     const { data: userProfile, error: fetchError } = await supabaseAsosCustomer
       .from("users_profile")
-      .select("wallet")
+      .select("wallet, referral_code")
       .eq("user_id", userId)
       .single();
 
@@ -184,10 +229,10 @@ export const topUpUserWallet = async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch user profile" });
     }
 
+    // 2️⃣ Top up the user's wallet
     const newBalance = userProfile.wallet + amount;
 
-    // Update wallet balance
-    const { data: updateData, error: updateError } = await supabaseAsosCustomer
+    const { error: updateError } = await supabaseAsosCustomer
       .from("users_profile")
       .update({ wallet: newBalance })
       .eq("user_id", userId);
@@ -197,7 +242,43 @@ export const topUpUserWallet = async (req, res) => {
       return res.status(500).json({ error: "Failed to update wallet balance" });
     }
 
-    return res.status(200).json({ message: "Wallet topped up successfully", newBalance });
+    // ---------------------------
+    // REFERRAL BONUS SECTION
+    // ---------------------------
+
+    const referralAccountNumber = userProfile.referral_code;
+
+    if (referralAccountNumber) {
+      // 3️⃣ Find the referrer by their account number
+      const { data: referrerProfile, error: referrerError } = await supabaseAsosCustomer
+        .from("users_profile")
+        .select("user_id, wallet, withdrawable_commission")
+        .eq("account_number", referralAccountNumber)
+        .single();
+
+
+      if (!referrerError && referrerProfile) {
+        const referrerBonus = amount * 0.08; // 8% commission
+        const newReferrerBalance = referrerProfile.withdrawable_commission + referrerBonus;
+
+        // 4️⃣ Update referrer wallet
+        await supabaseAsosCustomer
+          .from("users_profile")
+          .update({ withdrawable_commission: newReferrerBalance })
+          .eq("user_id", referrerProfile.user_id);
+
+        
+      }
+    }
+
+    // ---------------------------
+    // END REFERRAL BONUS
+    // ---------------------------
+
+    return res.status(200).json({
+      message: "Wallet topped up successfully, referral processed",
+      newBalance,
+    });
 
   } catch (err) {
     console.error("Unexpected error in topUpUserWallet:", err);
