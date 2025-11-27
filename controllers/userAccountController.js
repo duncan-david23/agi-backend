@@ -246,30 +246,25 @@ export const topUpUserWallet = async (req, res) => {
     // REFERRAL BONUS SECTION
     // ---------------------------
 
-    const referralAccountNumber = userProfile.referral_code;
+const referralAccountNumber = userProfile.referral_code.trim();
 
-    if (referralAccountNumber) {
-      // 3️⃣ Find the referrer by their account number
-      const { data: referrerProfile, error: referrerError } = await supabaseAsosCustomer
-        .from("users_profile")
-        .select("user_id, wallet, withdrawable_commission")
-        .eq("account_number", referralAccountNumber)
-        .single();
+if (referralAccountNumber) {
+  const { data: referrerProfile, error: referrerError } = await supabaseAsosCustomer
+    .from("users_profile")
+    .select("user_id, withdrawable_commission")
+    .ilike("account_number", referralAccountNumber)
+    .single();
 
+  if (!referrerError && referrerProfile) {
+    const referrerBonus = amount * 0.08; // 8% commission
+    const newReferrerBalance = (referrerProfile.withdrawable_commission || 0) + referrerBonus;
 
-      if (!referrerError && referrerProfile) {
-        const referrerBonus = amount * 0.08; // 8% commission
-        const newReferrerBalance = referrerProfile.withdrawable_commission + referrerBonus;
-
-        // 4️⃣ Update referrer wallet
-        await supabaseAsosCustomer
-          .from("users_profile")
-          .update({ withdrawable_commission: newReferrerBalance })
-          .eq("user_id", referrerProfile.user_id);
-
-        
-      }
-    }
+    await supabaseAsosCustomer
+      .from("users_profile")
+      .update({ withdrawable_commission: newReferrerBalance })
+      .eq("user_id", referrerProfile.user_id);
+  }
+}
 
     // ---------------------------
     // END REFERRAL BONUS
