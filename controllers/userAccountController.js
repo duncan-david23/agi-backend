@@ -1,4 +1,5 @@
 import {supabaseAsosCustomer, supabaseAsos} from '../utils/supabaseClients.js'
+import { loadDailyTasks } from './userTasksController.js';
 
 
 export const createUserProfile = async (req, res)=> {
@@ -54,7 +55,6 @@ export const createUserProfile = async (req, res)=> {
       console.error("Error creating user profile:", profileError);
       return res.status(500).json({ error: "Failed to create user profile" });
     }
-
     return res.status(201).json({ message: "User profile created successfully", profile: profileData });
   } catch (err) {
     console.error("Unexpected error in createUserProfile:", err);
