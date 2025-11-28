@@ -6,43 +6,8 @@ import { supabaseAsosAdmin, supabaseAsosCustomer } from "../utils/supabaseClient
 
 let cached10 = [];
 
-// export const loadDailyTasks = async () => {
-//   try {
-//     // 1️⃣ Fetch all products
-//     const { data: products, error: productsError } = await supabaseAsosAdmin
-//       .from("products")
-//       .select("*");
-
-//     if (productsError || !products) {
-//       console.error("Error fetching products:", productsError);
-//       return;
-//     }
-
-//     // 2️⃣ Pick 10 random products
-//     cached10 = products.sort(() => Math.random() - 0.5).slice(0, 10);
-//     // console.log("Daily tasks loaded:", cached10.length);
-
-//     // 3️⃣ Assign to all users
-//     await assignTasksToAllUsers();
-
-//   } catch (err) {
-//     console.error("Error in loadDailyTasks:", err);
-//   }
-// };
-
-let cachedDailyTasks = null;
-let lastUpdated = null;
-
-
 export const loadDailyTasks = async () => {
   try {
-    const today = new Date().toDateString();
-
-    // If tasks are already loaded for today, just return them
-    if (lastUpdated === today && cachedDailyTasks) {
-      return cachedDailyTasks;
-    }
-
     // 1️⃣ Fetch all products
     const { data: products, error: productsError } = await supabaseAsosAdmin
       .from("products")
@@ -54,97 +19,132 @@ export const loadDailyTasks = async () => {
     }
 
     // 2️⃣ Pick 10 random products
-    cachedDailyTasks = products.sort(() => Math.random() - 0.5).slice(0, 10);
-    lastUpdated = today;
+    cached10 = products.sort(() => Math.random() - 0.5).slice(0, 10);
+    // console.log("Daily tasks loaded:", cached10.length);
 
     // 3️⃣ Assign to all users
     await assignTasksToAllUsers();
-
-    return cachedDailyTasks;
 
   } catch (err) {
     console.error("Error in loadDailyTasks:", err);
   }
 };
 
+let cachedDailyTasks = null;
+let lastUpdated = null;
 
-// const assignTasksToAllUsers = async () => {
+
+// export const loadDailyTasks = async () => {
 //   try {
-//     // 1️⃣ Fetch all users
-//     const { data: users, error: usersError } = await supabaseAsosCustomer
-//       .from("users_profile")
-//       .select("user_id");
+//     const today = new Date().toDateString();
 
-//     if (usersError || !users) {
-//       console.error("Error fetching users:", usersError);
+//     // If tasks are already loaded for today, just return them
+//     if (lastUpdated === today && cachedDailyTasks) {
+//       return cachedDailyTasks;
+//     }
+
+//     // 1️⃣ Fetch all products
+//     const { data: products, error: productsError } = await supabaseAsosAdmin
+//       .from("products")
+//       .select("*");
+
+//     if (productsError || !products) {
+//       console.error("Error fetching products:", productsError);
 //       return;
 //     }
 
-//     // 2️⃣ For each user, insert all 10 products individually
-//     for (const user of users) {
-//       const rowsToInsert = cached10.map(product => ({
-//         user_id: user.user_id,
-//         product_name: product.product_name,
-//         product_price: product.product_price,
-//         product_image: product.product_image,
-//       }));
+//     // 2️⃣ Pick 10 random products
+//     cachedDailyTasks = products.sort(() => Math.random() - 0.5).slice(0, 10);
+//     lastUpdated = today;
 
-//       const { error: insertError } = await supabaseAsosCustomer
-//         .from("user_tasks")
-//         .insert(rowsToInsert);
+//     // 3️⃣ Assign to all users
+//     await assignTasksToAllUsers();
 
-//       if (insertError) {
-//         console.error(`Failed to assign tasks for user ${user.user_id}:`, insertError);
-//       }
-//     }
+//     return cachedDailyTasks;
 
 //   } catch (err) {
-//     console.error("Error in assignTasksToAllUsers:", err);
+//     console.error("Error in loadDailyTasks:", err);
 //   }
 // };
 
 
-
-// new logic to assign tasks to all users
 const assignTasksToAllUsers = async () => {
   try {
-    const { data: users, error: usersError } =
-      await supabaseAsosCustomer
-        .from("users_profile")
-        .select("user_id");
+    // 1️⃣ Fetch all users
+    const { data: users, error: usersError } = await supabaseAsosCustomer
+      .from("users_profile")
+      .select("user_id");
 
     if (usersError || !users) {
-      console.error("Failed to fetch users:", usersError);
+      console.error("Error fetching users:", usersError);
       return;
     }
 
-    const rows = [];
-
-    // Build insert rows for all users × 10 products
+    // 2️⃣ For each user, insert all 10 products individually
     for (const user of users) {
-      for (const product of cached10) {
-        rows.push({
-          user_id: user.user_id,
-          product_name: product.product_name,
-          product_price: product.product_price,
-          product_image: product.product_image,
-        });
-      }
-    }
+      const rowsToInsert = cached10.map(product => ({
+        user_id: user.user_id,
+        product_name: product.product_name,
+        product_price: product.product_price,
+        product_image: product.product_image,
+      }));
 
-    const { error: insertError } =
-      await supabaseAsosCustomer
+      const { error: insertError } = await supabaseAsosCustomer
         .from("user_tasks")
-        .insert(rows);
+        .insert(rowsToInsert);
 
-    if (insertError) {
-      console.error("Failed inserting user tasks:", insertError);
+      if (insertError) {
+        console.error(`Failed to assign tasks for user ${user.user_id}:`, insertError);
+      }
     }
 
   } catch (err) {
     console.error("Error in assignTasksToAllUsers:", err);
   }
 };
+
+
+
+// new logic to assign tasks to all users
+// const assignTasksToAllUsers = async () => {
+//   try {
+//     const { data: users, error: usersError } =
+//       await supabaseAsosCustomer
+//         .from("users_profile")
+//         .select("user_id");
+
+//     if (usersError || !users) {
+//       console.error("Failed to fetch users:", usersError);
+//       return;
+//     }
+
+//     const rows = [];
+
+//     // Build insert rows for all users × 10 products
+//     for (const user of users) {
+//       for (const product of cached10) {
+//         rows.push({
+//           user_id: user.user_id,
+//           product_name: product.product_name,
+//           product_price: product.product_price,
+//           product_image: product.product_image,
+//         });
+//       }
+//     }
+
+//     const { error: insertError } =
+//       await supabaseAsosCustomer
+//         .from("user_tasks")
+//         .insert(rows);
+
+//     if (insertError) {
+//       console.error("Failed inserting user tasks:", insertError);
+//     }
+
+//   } catch (err) {
+//     console.error("Error in assignTasksToAllUsers:", err);
+//   }
+// };
 
 
 // Schedule cron job (e.g., every midnight)
