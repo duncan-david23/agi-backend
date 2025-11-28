@@ -1,8 +1,6 @@
 import cron from "node-cron";
 import { supabaseAsosAdmin, supabaseAsosCustomer } from "../utils/supabaseClients.js";
-import express from "express";
 
-const app = express();
 
 
 
@@ -184,7 +182,7 @@ export const fetchTasks = async (req, res) => {
 
 
 // external cron job route to get daily tasks
-app.get("/fetchDailyTasks", async (req, res) => {
+export const fetchDailyTasks = async (req, res) => {
   try {
     const tasks = await loadDailyTasks();
     res.status(200).json({ success: true, tasks });
@@ -192,7 +190,7 @@ app.get("/fetchDailyTasks", async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, error: "Failed to load tasks" });
   }
-});
+};
 
 
 
