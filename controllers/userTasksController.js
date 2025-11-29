@@ -6,7 +6,7 @@ import { supabaseAsosAdmin, supabaseAsosCustomer } from "../utils/supabaseClient
 
 let cached10 = [];
 
-export const loadDailyTasks = async () => {
+  const loadDailyTasks = async () => {
   try {
     // 1️⃣ Fetch all products
     const { data: products, error: productsError } = await supabaseAsosAdmin
@@ -17,10 +17,8 @@ export const loadDailyTasks = async () => {
       console.error("Error fetching products:", productsError);
       return;
     }
-
-    // 2️⃣ Pick 10 random products
     cached10 = products.sort(() => Math.random() - 0.5).slice(0, 10);
-    // console.log("Daily tasks loaded:", cached10.length);
+
 
     // 3️⃣ Assign to all users
     await assignTasksToAllUsers();
@@ -30,42 +28,7 @@ export const loadDailyTasks = async () => {
   }
 };
 
-let cachedDailyTasks = null;
-let lastUpdated = null;
 
-
-// export const loadDailyTasks = async () => {
-//   try {
-//     const today = new Date().toDateString();
-
-//     // If tasks are already loaded for today, just return them
-//     if (lastUpdated === today && cachedDailyTasks) {
-//       return cachedDailyTasks;
-//     }
-
-//     // 1️⃣ Fetch all products
-//     const { data: products, error: productsError } = await supabaseAsosAdmin
-//       .from("products")
-//       .select("*");
-
-//     if (productsError || !products) {
-//       console.error("Error fetching products:", productsError);
-//       return;
-//     }
-
-//     // 2️⃣ Pick 10 random products
-//     cachedDailyTasks = products.sort(() => Math.random() - 0.5).slice(0, 10);
-//     lastUpdated = today;
-
-//     // 3️⃣ Assign to all users
-//     await assignTasksToAllUsers();
-
-//     return cachedDailyTasks;
-
-//   } catch (err) {
-//     console.error("Error in loadDailyTasks:", err);
-//   }
-// };
 
 
 const assignTasksToAllUsers = async () => {
@@ -105,46 +68,6 @@ const assignTasksToAllUsers = async () => {
 
 
 
-// new logic to assign tasks to all users
-// const assignTasksToAllUsers = async () => {
-//   try {
-//     const { data: users, error: usersError } =
-//       await supabaseAsosCustomer
-//         .from("users_profile")
-//         .select("user_id");
-
-//     if (usersError || !users) {
-//       console.error("Failed to fetch users:", usersError);
-//       return;
-//     }
-
-//     const rows = [];
-
-//     // Build insert rows for all users × 10 products
-//     for (const user of users) {
-//       for (const product of cached10) {
-//         rows.push({
-//           user_id: user.user_id,
-//           product_name: product.product_name,
-//           product_price: product.product_price,
-//           product_image: product.product_image,
-//         });
-//       }
-//     }
-
-//     const { error: insertError } =
-//       await supabaseAsosCustomer
-//         .from("user_tasks")
-//         .insert(rows);
-
-//     if (insertError) {
-//       console.error("Failed inserting user tasks:", insertError);
-//     }
-
-//   } catch (err) {
-//     console.error("Error in assignTasksToAllUsers:", err);
-//   }
-// };
 
 
 // Schedule cron job (e.g., every midnight)
@@ -185,7 +108,7 @@ export const fetchTasks = async (req, res) => {
 export const fetchDailyTasks = async (req, res) => {
   try {
     const tasks = await loadDailyTasks();
-    res.status(200).json({ success: true, tasks });
+    res.status(200).json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: "Failed to load tasks" });
@@ -377,47 +300,3 @@ export const updateCommission = async (req, res) => {
 
 
 
-// fetch user tasks
-
-// export const fetchUserTasks = async (req, res) => {
-//   try {
-//     // 1️⃣ Check Authorization Header
-//     const authHeader = req.headers.authorization;
-//     if (!authHeader) {
-//       return res.status(401).json({ error: "Missing authorization header" });
-//     }
-
-//     const token = authHeader.replace("Bearer ", "").trim();
-
-//     // 2️⃣ Validate user token
-//     const { data: { user }, error: userError } = await supabaseAsosCustomer.auth.getUser(token);
-
-//     if (userError || !user) {
-//       console.error("Invalid or expired token:", userError);
-//       return res.status(401).json({ error: "Invalid or expired token" });
-//     }
-
-//     const userId = user.id;
-
-//     // 3️⃣ Fetch all tasks for this user
-//     const { data: tasks, error: tasksError } = await supabaseAsosCustomer
-//       .from('user_tasks')
-//       .select('*')
-//       .eq('user_id', userId);
-
-//     if (tasksError) {
-//       console.error("Error fetching user tasks:", tasksError);
-//       return res.status(500).json({ error: "Failed to fetch user tasks" });
-//     }
-
-//     // 4️⃣ Return tasks
-//     return res.status(200).json({
-//       message: "User tasks fetched successfully",
-//       tasks: tasks || []
-//     });
-
-//   } catch (err) {
-//     console.error("Unexpected error in fetchUserTasks:", err);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// };
