@@ -71,7 +71,7 @@ const assignTasksToAllUsers = async () => {
 
 
 // Schedule cron job (e.g., every midnight)
-cron.schedule("0 0 * * *", loadDailyTasks);
+cron.schedule("0 8 * * *", loadDailyTasks);
 
 
 
