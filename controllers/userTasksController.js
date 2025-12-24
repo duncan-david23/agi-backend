@@ -6,7 +6,7 @@ import { supabaseAsosAdmin, supabaseAsosCustomer } from "../utils/supabaseClient
 
 let cached10 = [];
 
-  const loadDailyTasks = async () => {
+  export const loadDailyTasks = async (req, res) => {
   try {
     // 1️⃣ Fetch all products
     const { data: products, error: productsError } = await supabaseAsosAdmin
@@ -23,6 +23,8 @@ let cached10 = [];
     // 3️⃣ Assign to all users
     await assignTasksToAllUsers();
 
+    
+    return res.status(200).json({ success: true });
   } catch (err) {
     console.error("Error in loadDailyTasks:", err);
   }
@@ -71,7 +73,7 @@ const assignTasksToAllUsers = async () => {
 
 
 // Schedule cron job (e.g., every midnight)
-cron.schedule("0 8 * * *", loadDailyTasks);
+// cron.schedule("0 8 * * *", loadDailyTasks);
 
 
 
