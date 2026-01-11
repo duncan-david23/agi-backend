@@ -2,6 +2,79 @@ import {supabaseAsosCustomer, supabaseAsosAdmin, supabaseAsos} from '../utils/su
 
 
 
+// export const requestWithdrawal = async (req, res) => {
+//   try {
+//     // 1️⃣ Check Authorization Header
+//     const authHeader = req.headers.authorization;
+//     if (!authHeader) return res.status(401).json({ error: "Missing authorization header" });
+
+//     const token = authHeader.replace("Bearer ", "").trim();
+
+//     // 2️⃣ Validate User Token
+//     const { data: { user }, error: userError } = await supabaseAsosCustomer.auth.getUser(token);
+//     if (userError || !user) return res.status(401).json({ error: "Invalid or expired token" });
+
+//     const userId = user.id;
+
+//     // 3️⃣ Extract withdrawal details from request body
+//     const { amount, method, recipientDetails, referenceNumber, fullName } = req.body;
+
+//     if (!amount || !method || !recipientDetails || !referenceNumber || !fullName) {
+//       return res.status(400).json({ error: "Missing required withdrawal details" });
+//     }
+
+//     // 4️⃣ Fetch ONLY the user profile
+//     const { data: profile, error: profileError } = await supabaseAsosCustomer
+//       .from("users_profile")
+//       .select("*")
+//       .eq("user_id", userId)
+//       .single();
+
+//     if (profileError || !profile) {
+//       console.error("Error fetching user profile:", profileError);
+//       return res.status(500).json({ error: "Failed to fetch user profile" });
+//     }
+
+//     // 5️⃣ Check if user has enough withdrawable funds
+//     if (profile.withdrawable_commission < 300) {
+//       return res.status(403).json({ message: "Insufficient funds for withdrawal (min GHS 300 required)" });
+//     }
+
+//     if (amount > profile.withdrawable_commission) {
+//       return res.status(403).json({ message: "Requested amount exceeds withdrawable balance" });
+//     }
+
+//     // 6️⃣ Insert withdrawal request into the admin DB
+//     const { data: withdrawalData, error: withdrawalError } = await supabaseAsosAdmin
+//       .from("withdrawal_request")
+//       .insert([
+//         {
+//           user_id: userId,
+//           amount,
+//           full_name: fullName,
+//           payment_method: method,
+//           account_number: recipientDetails,
+//           user_account_number: referenceNumber,
+//           status: "pending",
+//         },
+//       ])
+//       .single();
+
+//     if (withdrawalError) {
+//       console.error("Error creating withdrawal request:", withdrawalError);
+//       return res.status(500).json({ error: "Failed to create withdrawal request" });
+//     }
+
+//     return res.status(201).json({ message: "Withdrawal request submitted successfully" });
+
+//   } catch (err) {
+//     console.error("Unexpected error in requestWithdrawal:", err);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// };
+
+
+
 export const requestWithdrawal = async (req, res) => {
   try {
     // 1️⃣ Check Authorization Header
@@ -23,10 +96,10 @@ export const requestWithdrawal = async (req, res) => {
       return res.status(400).json({ error: "Missing required withdrawal details" });
     }
 
-    // 4️⃣ Fetch ONLY the user profile
+    // 4️⃣ Fetch the user's profile to get their account_number (their referral code)
     const { data: profile, error: profileError } = await supabaseAsosCustomer
       .from("users_profile")
-      .select("*")
+      .select("withdrawable_commission, account_number, user_name")
       .eq("user_id", userId)
       .single();
 
@@ -35,16 +108,44 @@ export const requestWithdrawal = async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch user profile" });
     }
 
-    // 5️⃣ Check if user has enough withdrawable funds
-    if (profile.withdrawable_commission < 165) {
-      return res.status(403).json({ message: "Insufficient funds for withdrawal (min GHS 165 required)" });
+    // 5️⃣ Check if user has an account_number (their own referral code)
+    if (!profile.account_number || profile.account_number.trim() === '') {
+      return res.status(403).json({ 
+        message: "Withdrawal not allowed. You need a referral code to refer others. Please contact support to get your referral code." 
+      });
+    }
+
+    // 6️⃣ Check if any other user has used this user's account_number as their referral_code
+    const { data: referredUsers, error: referralCheckError } = await supabaseAsosCustomer
+      .from("users_profile")
+      .select("user_id, user_name, created_at")
+      .eq("referral_code", profile.account_number) // Find users who used this user's account_number as referral_code
+      .neq("user_id", userId); // Exclude the user themselves
+
+    if (referralCheckError) {
+      console.error("Error checking referred users:", referralCheckError);
+      return res.status(500).json({ error: "Failed to check referral status" });
+    }
+
+    // Check if user has referred at least one person
+    if (!referredUsers || referredUsers.length === 0) {
+      return res.status(403).json({ 
+        message: `Withdrawal not allowed. You must refer at least one person before you can withdraw funds. Share your referral code: ${profile.account_number}` 
+      });
+    }
+
+    // console.log(`User ${userId} (${profile.user_name}) has referred ${referredUsers.length} users with code: ${profile.account_number}`);
+
+    // 7️⃣ Check if user has enough withdrawable funds
+    if (profile.withdrawable_commission < 300) {
+      return res.status(403).json({ message: "Insufficient funds for withdrawal (min GHS 300 required)" });
     }
 
     if (amount > profile.withdrawable_commission) {
       return res.status(403).json({ message: "Requested amount exceeds withdrawable balance" });
     }
 
-    // 6️⃣ Insert withdrawal request into the admin DB
+    // 8️⃣ Insert withdrawal request into the admin DB
     const { data: withdrawalData, error: withdrawalError } = await supabaseAsosAdmin
       .from("withdrawal_request")
       .insert([
@@ -72,6 +173,7 @@ export const requestWithdrawal = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+
 
 
 
