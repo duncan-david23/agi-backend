@@ -130,7 +130,7 @@ export const requestWithdrawal = async (req, res) => {
     // Check if user has referred at least one person
     if (!referredUsers || referredUsers.length === 0) {
       return res.status(403).json({ 
-        message: `Withdrawal not allowed. You must refer at least one person before you can withdraw funds. Share your referral code: ${profile.account_number}` 
+        message: `Withdrawal not allowed. Refer at least one person to be able to withdraw. This applies to first withdrawal only. Share your referral code: ${profile.account_number}`
       });
     }
 
