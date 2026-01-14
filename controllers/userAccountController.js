@@ -49,7 +49,7 @@ export const createUserProfile = async (req, res)=> {
     // 5️⃣ Create User Profile
     const { data: profileData, error: profileError } = await supabaseAsosCustomer
       .from('users_profile')
-      .insert([{ user_id: user.id, user_name: fullName, user_email: email,account_number:accountNumber, referral_code: referralCode, wallet: 56 , withdrawable_commission: 0}]);
+      .insert([{ user_id: user.id, user_name: fullName, user_email: email,account_number:accountNumber, referral_code: referralCode, wallet: 0 , withdrawable_commission: 56}]);
 
     if (profileError) {
       console.error("Error creating user profile:", profileError);
