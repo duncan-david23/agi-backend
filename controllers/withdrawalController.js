@@ -137,8 +137,8 @@ export const requestWithdrawal = async (req, res) => {
     // console.log(`User ${userId} (${profile.user_name}) has referred ${referredUsers.length} users with code: ${profile.account_number}`);
 
     // 7️⃣ Check if user has enough withdrawable funds
-    if (profile.withdrawable_commission < 300) {
-      return res.status(403).json({ message: "Insufficient funds for withdrawal (min GHS 300 required)" });
+    if (profile.withdrawable_commission < 80) {
+      return res.status(403).json({ message: "Insufficient funds for withdrawal (min GHS 80 required)" });
     }
 
     if (amount > profile.withdrawable_commission) {
